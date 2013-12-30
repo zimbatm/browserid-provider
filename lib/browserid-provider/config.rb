@@ -1,6 +1,6 @@
 module BrowserID
   #
-  # authentication_path       Where to redirect users for login
+  # login_path                Where to redirect users for login
   #                           defaults to: "/users/sign_in" (Devise default)
   #
   # provision_path            What HTTP path to deliver provisioning from

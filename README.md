@@ -35,7 +35,7 @@ can easily be customized to fit any middleware function.
 
 The available configuration options are the following:
 
-*   authentication_path
+*   login_path
 
     Where to redirect users for login
     defaults to: "/users/sign_in" (Devise default)
