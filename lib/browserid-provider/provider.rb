@@ -16,21 +16,21 @@ module BrowserID
 
     # Rack enabled!
     def call(env)
-      @env, @path = env, env["PATH_INFO"], @req = Rack::Request.new(env)
+      env, path, req = env, env["PATH_INFO"], Rack::Request.new(env)
       env['browserid'] = @config
 
       # Return Not found or send call back to middleware stack unless the URL is captured here
-      return (@app ? @app.call(env) : not_found) unless @config.urls.include? @path
+      return (@app ? @app.call(env) : not_found) unless @config.urls.include? path
 
-      case @path
+      case path
         when "/.well-known/browserid"
-          @req.get? ? well_known_browserid : not_found
+          req.get? ? well_known_browserid : not_found
         when config.whoami_path
-          @req.get? ? whoami : not_found
+          req.get? ? whoami(env) : not_found
         when config.provision_path
-          @req.get? ? provision : not_found
+          req.get? ? provision(env) : not_found
         when config.certify_path
-          @req.post? ? certify : not_found
+          req.post? ? certify(env, req) : not_found
         else not_found
       end
     end
@@ -40,9 +40,9 @@ module BrowserID
       [ 200, {"Content-Type" => "application/json"}, [@identity.to_json] ]
     end
 
-    def whoami
-      email = current_user_email
-      [ 200, {"Content-Type" => "application/json"}, [{ user: email ? email.sub(/@.*/,'') : nil }.to_json] ]
+    def whoami(env)
+      email = current_user_email(env)
+      [ 200, {"Content-Type" => "application/json"}, [{ :user => email ? email.sub(/@.*/,'') : nil }.to_json] ]
     end
 
     #
@@ -75,13 +75,13 @@ module BrowserID
     #   }
     #
     # See https://github.com/mozilla/id-specs/blob/prod/browserid/index.md#identity-certificate for further reference.
-    def certify
-      email = current_user_email
+    def certify(env, req)
+      email = current_user_email(env)
       return err "No user is logged in." unless email
 
       # Get params from Rails' ActionDispatch or from Rack Request
       params = env["action_dispatch.request.request_parameters"] ? env["action_dispatch.request.request_parameters"] : @req.params
-      return err "Missing a required parameter (duration, pubkey)" if params.keys.sort != ["duration", "pubkey"]
+      return err "Missing a required parameter (duration, pubkey)" if (params.keys & %w[duration pubkey]).size != 2
 
       expiration = (Time.now.strftime("%s").to_i + params["duration"].to_i) * 1000
 
@@ -105,9 +105,9 @@ module BrowserID
     end
 
     # Return the provision iframe content.
-    def provision
-      email = current_user_email
-      template_vars = @config.merge( { :domain_name => issuer(email) } )
+    def provision(env)
+      email = current_user_email(env)
+      template_vars = @config.merge( { domain_name: issuer(email) } )
       [200, {"Content-Type" => "text/html"}, BrowserID::Template.render("provision", template_vars)]
     end
 
@@ -122,9 +122,9 @@ module BrowserID
     end
 
     # Return the email of the user logged in currently, or nil
-    def current_user_email
+    def current_user_email(env)
       begin
-        current_user = @env[config.whoami].user
+        current_user = env[config.whoami].user
         current_user ? current_user.email : nil
       rescue NoMethodError
         raise NoMethodError, "The middleware provided in BrowserID::Config.whoami doesn't have a :user method, or the :user doesn't have the :email method."
