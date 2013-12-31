@@ -6,7 +6,8 @@ module BrowserID
     attr_accessor :config
 
     # == Options ==
-    # :key_path     where to store the OpenSSL private key
+    # :private_key_path     where to store the OpenSSL private key
+    # :provision_path       where the user needs to log in
     def initialize(options = {})
       @config = BrowserID::Config.new(options)
 
