@@ -11,7 +11,7 @@ module BrowserID
 
     def initialize(app = nil, options = {})
       @app, @config = app, BrowserID::Config.new(options)
-      @identity = BrowserID::Identity.new
+      @identity = BrowserID::Identity.new(options)
     end
 
     # Rack enabled!
