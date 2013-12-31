@@ -2,9 +2,8 @@ require "test/unit"
 require "json"
 require "rack"
 require "rack/test"
-require "mocha"
+require "mocha/setup"
 require "browserid-provider"
-require "ruby-debug"
 require "warden"
 
 class MyTest < Test::Unit::TestCase
@@ -15,7 +14,7 @@ class MyTest < Test::Unit::TestCase
   def app
     @thisapp = Rack::Builder.new do
       use Rack::CommonLogger
-      use Rack::Session::Cookie
+      use Rack::Session::Cookie, secret: 'test'
       use Warden::Manager do |manager|
         manager.default_strategies :basic
       end
